@@ -142,8 +142,8 @@
   <rect id="kitchenTank" x="50" y="50" width="80" height="120" fill="url(#kitchenFillGradient)" stroke="#1e40af" stroke-width="2" class="tank-fill"/>
   <text x="90" y="110" text-anchor="middle" fill="white" font-size="12">Kitchen</text>
 
-  <rect id="bathroomTank" x="250" y="50" width="80" height="120" fill="url(#bathroomFillGradient)" stroke="#065f46" stroke-width="2" class="tank-fill"/>
-  <text x="290" y="110" text-anchor="middle" fill="white" font-size="12">Bathroom</text>
+  <rect id="bathroomTank" x="200" y="50" width="80" height="120" fill="url(#bathroomFillGradient)" stroke="#065f46" stroke-width="2" class="tank-fill"/>
+  <text x="240" y="110" text-anchor="middle" fill="white" font-size="12">Bathroom</text>
 
   <!-- Valve Controls - positioned between pumps and tanks -->
   <!-- Main distribution valve (center) -->
@@ -160,7 +160,7 @@
 
   <!-- Pumps -->
   <!-- Boring Pump - Detailed Icon -->
-  <svg id="boringPump" x="20" y="205" width="120" height="90" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-labelledby="boringTitle" role="img">
+  <svg id="boringPump" x="30" y="205" width="120" height="90" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-labelledby="boringTitle" role="img">
     <title id="boringTitle">Boring Pump</title>
     <g>
       <path style="fill:#2969B0;" d="M291.701,62.693H119.38c-54.871,0-99.352,44.481-99.352,99.352v25.948 c0,54.871,44.481,99.352,99.352,99.352h172.321l41.796-18.286V80.978L291.701,62.693z"></path>
@@ -183,9 +183,9 @@
       </g>
     </g>
   </svg>
-  <text x="40" y="305" text-anchor="middle" fill="#374151" font-size="12" font-family="sans-serif">Boring Pump</text>
+  <text x="90" y="305" text-anchor="middle" fill="#374151" font-size="12" font-family="sans-serif">Boring Pump</text>
 
-  <svg id="undergroundPump" x="240" y="205" width="120" height="90" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-labelledby="undergroundTitle" role="img">
+  <svg id="undergroundPump" x="180" y="205" width="120" height="90" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-labelledby="undergroundTitle" role="img">
     <title id="undergroundTitle">Underground Pump</title>
     <g>
       <path style="fill:#ef4444;" d="M291.701,62.693H119.38c-54.871,0-99.352,44.481-99.352,99.352v25.948 c0,54.871,44.481,99.352,99.352,99.352h172.321l41.796-18.286V80.978L291.701,62.693z"></path>
@@ -208,7 +208,7 @@
       </g>
     </g>
   </svg>
-  <text x="300" y="305" text-anchor="middle" fill="#374151" font-size="12" font-family="sans-serif">Underground Pump</text>
+  <text x="240" y="305" text-anchor="middle" fill="#374151" font-size="12" font-family="sans-serif">Underground Pump</text>
 
   <!-- Water Flow Pipes - Different combinations -->
   <!-- Kitchen Tank + Boring Pump -->
@@ -232,14 +232,14 @@
         visibility="hidden"/>
 
   <!-- Control Buttons -->
-  <circle id="startButton" cx="200" cy="340" r="20" fill="#22c55e" stroke="#16a34a" stroke-width="2" class="cursor-pointer" visibility="hidden"/>
-  <text x="200" y="346" text-anchor="middle" fill="white" font-size="10" font-weight="bold" class="cursor-pointer" id="startText" visibility="hidden">START</text>
+  <circle id="startButton" cx="150" cy="340" r="20" fill="#22c55e" stroke="#16a34a" stroke-width="2" class="cursor-pointer" visibility="hidden"/>
+  <text x="150" y="346" text-anchor="middle" fill="white" font-size="10" font-weight="bold" class="cursor-pointer" id="startText" visibility="hidden">START</text>
   
-  <circle id="stopButton" cx="200" cy="280" r="20" fill="#ef4444" stroke="#dc2626" stroke-width="2" class="cursor-pointer" visibility="hidden"/>
-  <text x="200" y="286" text-anchor="middle" fill="white" font-size="10" font-weight="bold" class="cursor-pointer" id="stopText" visibility="hidden">STOP</text>
+  <circle id="stopButton" cx="200" cy="340" r="20" fill="#ef4444" stroke="#dc2626" stroke-width="2" class="cursor-pointer" visibility="hidden"/>
+  <text x="200" y="346" text-anchor="middle" fill="white" font-size="10" font-weight="bold" class="cursor-pointer" id="stopText" visibility="hidden">STOP</text>
   
   <!-- Timer Display -->
-  <text id="timerDisplay" x="195" y="370" text-anchor="middle" fill="#374151" font-size="12" font-weight="bold" visibility="hidden"></text>
+  <text id="timerDisplay" x="175" y="390" text-anchor="middle" fill="#374151" font-size="12" font-weight="bold" visibility="hidden"></text>
 </svg>
 
   <script>
