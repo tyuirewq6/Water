@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Water Tank Refill</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .pipe {
+      stroke-width: 10;
+      fill: none;
+      stroke: #3b82f6;
+      stroke-linecap: round;
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      transition: stroke-dashoffset 2s linear;
+    }
+    
+    /* Water flow animation for pipes */
+    .water-pipe {
+      fill: none;
+      stroke: #2563eb;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 10 5;
+      stroke-dashoffset: 0;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    
+    .water-pipe.flowing {
+      opacity: 1;
+      animation: water-flow 2s linear infinite;
+    }
+    
+    @keyframes water-flow {
+      0% {
+        stroke-dashoffset: 0;
+      }
+      100% {
+        stroke-dashoffset: -15;
+      }
+    }
+
+    /* Tank filling animation */
+    .tank-fill {
+      transition: all 0.3s ease;
+    }
+    
+    /* Valve rotation animations */
+    .valve-icon {
+      transition: transform 0.5s ease;
+      transform-origin: center;
+    }
+    
+    .valve-horizontal {
+      transform: rotate(0deg);
+    }
+    
+    .valve-vertical {
+      transform: rotate(90deg);
+    }
+    
+    .valve-diagonal-1 {
+      transform: rotate(45deg);
+    }
+    
+    .valve-diagonal-2 {
+      transform: rotate(-45deg);
+    }
+  </style>
+</head>
+<body class="bg-blue-50 min-h-screen flex items-center justify-center p-4 max-w-4xl mx-auto">
+
+<div class="bg-white p-6 rounded-lg shadow-lg w-full">
+  <h1 class="text-2xl font-bold mb-6 text-center">Interactive Water Tank Refill</h1>
+
+  <!-- Controls -->
+  <div class="flex flex-col md:flex-row md:space-x-6 mb-6">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Select Tank:</label>
+      <select id="tankSelect" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+        <option value="kitchen">Kitchen Tank</option>
+        <option value="bathroom">Bathroom Tank</option>
+      </select>
+
+      <label class="block text-sm font-medium text-gray-700 mt-4">Select Pump:</label>
+      <select id="pumpSelect" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+        <option value="underground">Underground Pump</option>
+        <option value="boring">Boring Pump</option>
+      </select>
+
+      <label class="block text-sm font-medium text-gray-700 mt-4">Lines empty to fill:</label>
+      <div class="flex items-center space-x-3 mt-1">
+        <input id="linesEmpty" type="range" min="0" value="0" class="w-full" />
+        <input id="linesEmptyNumber" type="number" min="0" value="0"
+               class="w-20 border border-gray-300 rounded p-1 text-center" />
+      </div>
+    </div>
+
+    <!-- Volume bars -->
+    <div class="mt-6 md:mt-0 w-full md:w-48 flex justify-around items-end">
+      <div class="text-center">
+        <div class="mb-2 font-medium text-gray-700">Kitchen</div>
+        <div id="kitchenVolume" class="w-16 h-48 bg-gray-100 rounded border border-gray-200 p-1 flex flex-col-reverse justify-start">
+          <!-- 9 slots will be created by JS -->
+        </div>
+        <div id="kitchenLabel" class="text-sm text-gray-600 mt-1">Filled: 9 / 9</div>
+      </div>
+
+      <div class="text-center">
+        <div class="mb-2 font-medium text-gray-700">Bathroom</div>
+        <div id="bathroomVolume" class="w-16 h-48 bg-gray-100 rounded border border-gray-200 p-1 flex flex-col-reverse justify-start">
+          <!-- 11 slots will be created by JS -->
+        </div>
+        <div id="bathroomLabel" class="text-sm text-gray-600 mt-1">Filled: 11 / 11</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG Diagram -->
+<svg width="100%" height="400">
+  <!-- Tank Fill Gradients - CORRECTED FOR BOTTOM-TO-TOP FILLING -->
+  <defs>
+    <linearGradient id="kitchenFillGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop id="kitchenFillStop" offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#e5e7eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e5e7eb;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="bathroomFillGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop id="bathroomFillStop" offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#e5e7eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e5e7eb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Tanks with gradient fills -->
+  <rect id="kitchenTank" x="50" y="50" width="80" height="120" fill="url(#kitchenFillGradient)" stroke="#1e40af" stroke-width="2" class="tank-fill"/>
+  <text x="90" y="110" text-anchor="middle" fill="white" font-size="12">Kitchen</text>
+
+  <rect id="bathroomTank" x="250" y="50" width="80" height="120" fill="url(#bathroomFillGradient)" stroke="#065f46" stroke-width="2" class="tank-fill"/>
+  <text x="290" y="110" text-anchor="middle" fill="white" font-size="12">Bathroom</text>
+
+  <!-- Valve Controls - positioned between pumps and tanks -->
+  <!-- Main distribution valve (center) -->
+  <g id="mainValve" class="valve-icon hidden" transform="translate(170, 180)">
+  </g>
+  
+  <!-- Kitchen valve -->
+  <g id="kitchenValve" class="valve-icon hidden" transform="translate(90, 180)">
+  </g>
+  
+  <!-- Bathroom valve -->
+  <g id="bathroomValve" class="valve-icon hidden" transform="translate(290, 180)">
+  </g>
+
+  <!-- Pumps -->
+  <!-- Boring Pump - Detailed Icon -->
+  <svg id="boringPump" x="20" y="205" width="120" height="90" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-labelledby="boringTitle" role="img">
+    <title id="boringTitle">Boring Pump</title>
+    <g>
+      <path style="fill:#2969B0;" d="M291.701,62.693H119.38c-54.871,0-99.352,44.481-99.352,99.352v25.948 c0,54.871,44.481,99.352,99.352,99.352h172.321l41.796-18.286V80.978L291.701,62.693z"></path>
+      <g>
+        <rect x="333.5" y="101.877" style="fill:#EBEBEB;" width="41.796" height="146.286"></rect>
+        <polygon style="fill:#EBEBEB;" points="417.089,227.264 375.293,248.162 375.293,101.877 417.089,122.774"></polygon>
+      </g>
+      <rect x="417.092" y="148.897" style="fill:#FFAC3D;" width="62.694" height="52.245"></rect>
+      <rect x="125.733" y="287.346" style="fill:#A8A8A8;" width="161.959" height="52.245"></rect>
+      <path style="fill:#EBEBEB;" d="M314.601,339.591H98.83c-6.78,0-12.278,5.497-12.278,12.278v27.69c0,6.78,5.497,12.278,12.278,12.278 h215.771c6.78,0,12.278-5.497,12.278-12.278v-27.69C326.879,345.088,321.382,339.591,314.601,339.591z"></path>
+      <rect x="10.449" y="391.836" style="fill:#BFDEFF;" width="491.102" height="57.469"></rect>
+      <g>
+        <path style="fill:#231F20;" d="M132.528,206.366H245.29c5.771,0,10.449-4.679,10.449-10.449s-4.678-10.449-10.449-10.449H132.528 c-5.771,0-10.449,4.679-10.449,10.449S126.758,206.366,132.528,206.366z"></path>
+        <path style="fill:#231F20;" d="M278.813,185.468h-0.218c-5.771,0-10.449,4.679-10.449,10.449s4.678,10.449,10.449,10.449h0.218 c5.771,0,10.449-4.679,10.449-10.449S284.584,185.468,278.813,185.468z"></path>
+        <path style="fill:#231F20;" d="M278.813,227.264H132.528c-5.771,0-10.449,4.679-10.449,10.449s4.678,10.449,10.449,10.449h146.286 c5.771,0,10.449-4.679,10.449-10.449S284.584,227.264,278.813,227.264z"></path>
+        <path style="fill:#231F20;" d="M278.813,143.672H132.528c-5.771,0-10.449,4.679-10.449,10.449s4.678,10.449,10.449,10.449h146.286 c5.771,0,10.449-4.679,10.449-10.449S284.584,143.672,278.813,143.672z"></path>
+        <path style="fill:#231F20;" d="M132.18,122.774h0.348c5.771,0,10.449-4.679,10.449-10.449s-4.678-10.449-10.449-10.449h-0.348 c-5.771,0-10.449,4.679-10.449,10.449S126.409,122.774,132.18,122.774z"></path>
+        <path style="fill:#231F20;" d="M164.571,122.774h114.242c5.771,0,10.449-4.679,10.449-10.449s-4.678-10.449-10.449-10.449H164.571 c-5.771,0-10.449,4.679-10.449,10.449S158.8,122.774,164.571,122.774z"></path>
+        <path style="fill:#231F20;" d="M501.551,381.387H337.328v-29.518c0-12.531-10.195-22.727-22.727-22.727h-16.457v-33.21 l39.54-17.299c3.803-1.663,6.261-5.421,6.261-9.572v-10.449h31.347c1.683,0,3.267-0.408,4.675-1.114l-0.002,0.011l41.796-20.898 c3.54-1.77,5.776-5.387,5.776-9.346v-15.673h52.245c5.771,0,10.449-4.679,10.449-10.449v-52.245c0-5.77-4.678-10.449-10.449-10.449 h-52.245v-15.673c0-3.958-2.236-7.576-5.776-9.346l-41.796-20.898l0.002,0.011c-1.409-0.707-2.993-1.114-4.675-1.114h-31.347 V80.981c0-4.151-2.458-7.909-6.261-9.572l-41.796-18.286c-1.321-0.579-2.747-0.877-4.188-0.877H119.38 C58.835,52.244,9.579,101.501,9.579,162.046v25.948c0,59.174,47.054,107.557,105.709,109.716v31.432H98.831 c-12.531,0-22.727,10.195-22.727,22.727v29.518H10.449C4.678,381.387,0,386.066,0,391.836v57.469 c0,5.77,4.678,10.449,10.449,10.449h491.102c5.771,0,10.449-4.679,10.449-10.449v-57.469 C512,386.066,507.322,381.387,501.551,381.387z M427.538,159.346h41.796v31.347h-41.796V159.346z M385.742,118.784l20.898,10.449 v91.574l-20.898,10.449V118.784z M343.946,112.325h20.898v125.388h-20.898V112.325z M337.277,381.387h-0.03 C337.259,381.252,337.269,381.278,337.277,381.387z M30.477,187.994v-25.948c0-49.021,39.882-88.904,88.903-88.904h170.136 l33.533,14.67v174.414l-33.533,14.67H119.38C70.358,276.897,30.477,237.015,30.477,187.994z M277.246,297.795v31.347H136.185 v-31.347H277.246z M97.001,350.40H316.43v31.347H97.001C97.001,381.387,97.001,350.40,97.001,350.040z M76.184,381.387h-0.03 C76.163,381.278,76.173,381.252,76.184,381.387z M491.102,438.856H20.898v-36.571h470.204V438.856z"></path>
+      </g>
+    </g>
+  </svg>
+  <text x="40" y="305" text-anchor="middle" fill="#374151" font-size="12" font-family="sans-serif">Boring Pump</text>
+
+  <svg id="undergroundPump" x="240" y="205" width="120" height="90" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-labelledby="undergroundTitle" role="img">
+    <title id="undergroundTitle">Underground Pump</title>
+    <g>
+      <path style="fill:#ef4444;" d="M291.701,62.693H119.38c-54.871,0-99.352,44.481-99.352,99.352v25.948 c0,54.871,44.481,99.352,99.352,99.352h172.321l41.796-18.286V80.978L291.701,62.693z"></path>
+      <g>
+        <rect x="333.5" y="101.877" style="fill:#EBEBEB;" width="41.796" height="146.286"></rect>
+        <polygon style="fill:#EBEBEB;" points="417.089,227.264 375.293,248.162 375.293,101.877 417.089,122.774"></polygon>
+      </g>
+      <rect x="417.092" y="148.897" style="fill:#FFAC3D;" width="62.694" height="52.245"></rect>
+      <rect x="125.733" y="287.346" style="fill:#A8A8A8;" width="161.959" height="52.245"></rect>
+      <path style="fill:#EBEBEB;" d="M314.601,339.591H98.83c-6.78,0-12.278,5.497-12.278,12.278v27.69c0,6.78,5.497,12.278,12.278,12.278 h215.771c6.78,0,12.278-5.497,12.278-12.278v-27.90C326.879,345.088,321.382,339.591,314.601,339.591z"></path>
+      <rect x="10.449" y="391.836" style="fill:#BFDEFF;" width="491.102" height="57.469"></rect>
+      <g>
+        <path style="fill:#231F20;" d="M132.528,206.366H245.29c5.771,0,10.449-4.679,10.449-10.449s-4.678-10.449-10.449-10.449H132.528 c-5.771,0-10.449,4.679-10.449,10.449S126.758,206.366,132.528,206.366z"></path>
+        <path style="fill:#231F20;" d="M278.813,185.468h-0.218c-5.771,0-10.449,4.679-10.449,10.449s4.678,10.449,10.449,10.449h0.218 c5.771,0,10.449-4.679,10.449-10.449S284.584,185.468,278.813,185.468z"></path>
+        <path style="fill:#231F20;" d="M278.813,227.264H132.528c-5.771,0-10.449,4.679-10.449,10.449s4.678,10.449,10.449,10.449h146.286 c5.771,0,10.449-4.679,10.449-10.449S284.584,227.264,278.813,227.264z"></path>
+        <path style="fill:#231F20;" d="M278.813,143.672H132.528c-5.771,0-10.449,4.679-10.449,10.449s4.678,10.449,10.449,10.449h146.286 c5.771,0,10.449-4.679,10.449-10.449S284.584,143.672,278.813,143.672z"></path>
+        <path style="fill:#231F20;" d="M132.18,122.774h0.348c5.771,0,10.449-4.679,10.449-10.449s-4.678-10.449-10.449-10.449h-0.348 c-5.771,0-10.449,4.679-10.449,10.449S126.409,122.774,132.18,122.774z"></path>
+        <path style="fill:#231F20;" d="M164.571,122.774h114.242c5.771,0,10.449-4.679,10.449-10.449s-4.678-10.449-10.449-10.449H164.571 c-5.771,0-10.449,4.679-10.449,10.449S158.8,122.774,164.571,122.774z"></path>
+        <path style="fill:#231F20;" d="M501.551,381.387H337.328v-29.518c0-12.531-10.195-22.727-22.727-22.727h-16.457v-33.21 l39.54-17.299c3.803-1.663,6.261-5.421,6.261-9.572v-10.449h31.347c1.683,0,3.267-0.408,4.675-1.114l-0.002,0.011l41.796-20.898 c3.54-1.77,5.776-5.387,5.776-9.346v-15.673h52.245c5.771,0,10.449-4.679,10.449-10.449v-52.245c0-5.70-4.678-10.449-10.449-10.449 h-52.245v-15.673c0-3.958-2.236-7.576-5.776-9.346l-41.796-20.898l0.002,0.011c-1.409-0.707-2.993-1.114-4.675-1.114h-31.347 V80.981c0-4.151-2.458-7.909-6.261-9.572l-41.796-18.286c-1.321-0.579-2.747-0.877-4.188-0.877H119.38 C58.835,52.244,9.579,101.501,9.579,162.046v25.948c0,59.174,47.054,107.557,105.709,109.716v31.432H98.831 c-12.531,0-22.727,10.195-22.727,22.727v29.518H10.449C4.678,381.387,0,386.066,0,391.836v57.469 c0,5.77,4.678,10.449,10.449,10.449h491.102c5.771,0,10.449-4.679,10.449-10.449v-57.469 C512,386.066,507.322,381.387,501.551,381.387z M427.538,159.346h41.796v31.347h-41.796V159.346z M385.742,118.784l20.898,10.449 v91.574l-20.898,10.449V118.784z M343.946,112.325h20.898v125.388h-20.898V112.325z M337.277,381.387h-0.03 C337.259,381.252,337.269,381.278,337.277,381.387z M30.477,187.994v-25.948c0-49.021,39.882-88.904,88.903-88.904h170.136 l33.533,14.67v174.414l-33.533,14.67H119.38C70.358,276.897,30.477,237.015,30.477,187.994z M277.246,297.795v31.347H136.185 v-31.347H277.246z M97.001,350.40H316.43v31.347H97.001C97.001,381.387,97.001,350.40,97.001,350.040z M76.184,381.387h-0.03 C76.163,381.278,76.173,381.252,76.184,381.387z M491.102,438.856H20.898v-36.571h470.204V438.856z"></path>
+      </g>
+    </g>
+  </svg>
+  <text x="300" y="305" text-anchor="middle" fill="#374151" font-size="12" font-family="sans-serif">Underground Pump</text>
+
+  <!-- Water Flow Pipes - Different combinations -->
+  <!-- Kitchen Tank + Boring Pump -->
+  <path id="pipeKitchenBoring" class="water-pipe" 
+        d="M80,205 Q90,180 90,170 L90,50" 
+        visibility="hidden"/>
+  
+  <!-- Kitchen Tank + Underground Pump -->
+  <path id="pipeKitchenUnderground" class="water-pipe" 
+        d="M240,205 Q180,180 120,150 Q100,120 90,50" 
+        visibility="hidden"/>
+  
+  <!-- Bathroom Tank + Boring Pump -->
+  <path id="pipeBathroomBoring" class="water-pipe" 
+        d="M140,205 Q200,180 250,150 Q270,120 290,50" 
+        visibility="hidden"/>
+  
+  <!-- Bathroom Tank + Underground Pump -->
+  <path id="pipeBathroomUnderground" class="water-pipe" 
+        d="M300,205 Q295,180 290,170 L290,50" 
+        visibility="hidden"/>
+
+  <!-- Control Buttons -->
+  <circle id="startButton" cx="200" cy="340" r="20" fill="#22c55e" stroke="#16a34a" stroke-width="2" class="cursor-pointer" visibility="hidden"/>
+  <text x="200" y="346" text-anchor="middle" fill="white" font-size="10" font-weight="bold" class="cursor-pointer" id="startText" visibility="hidden">START</text>
+  
+  <circle id="stopButton" cx="200" cy="280" r="20" fill="#ef4444" stroke="#dc2626" stroke-width="2" class="cursor-pointer" visibility="hidden"/>
+  <text x="200" y="286" text-anchor="middle" fill="white" font-size="10" font-weight="bold" class="cursor-pointer" id="stopText" visibility="hidden">STOP</text>
+  
+  <!-- Timer Display -->
+  <text id="timerDisplay" x="195" y="370" text-anchor="middle" fill="#374151" font-size="12" font-weight="bold" visibility="hidden"></text>
+</svg>
+
+  <script>
+    (function () {
+      const kitchenMax = 9;
+      const bathroomMax = 11;
+
+      const tankSelect = document.getElementById('tankSelect');
+      const pumpSelect = document.getElementById('pumpSelect');
+      const linesRange = document.getElementById('linesEmpty');
+      const linesNumber = document.getElementById('linesEmptyNumber');
+
+      const kitchenVolume = document.getElementById('kitchenVolume');
+      const bathroomVolume = document.getElementById('bathroomVolume');
+      const kitchenLabel = document.getElementById('kitchenLabel');
+      const bathroomLabel = document.getElementById('bathroomLabel');
+
+      // Pipe elements
+      const pipeKitchenBoring = document.getElementById('pipeKitchenBoring');
+      const pipeKitchenUnderground = document.getElementById('pipeKitchenUnderground');
+      const pipeBathroomBoring = document.getElementById('pipeBathroomBoring');
+      const pipeBathroomUnderground = document.getElementById('pipeBathroomUnderground');
+      
+      // Control elements
+      const startButton = document.getElementById('startButton');
+      const startText = document.getElementById('startText');
+      const stopButton = document.getElementById('stopButton');
+      const stopText = document.getElementById('stopText');
+      const timerDisplay = document.getElementById('timerDisplay');
+
+      // Valve elements
+      const mainValve = document.getElementById('mainValve');
+      const kitchenValve = document.getElementById('kitchenValve');
+      const bathroomValve = document.getElementById('bathroomValve');
+
+      // Tank fill gradient stops
+      const kitchenFillStop = document.getElementById('kitchenFillStop');
+      const bathroomFillStop = document.getElementById('bathroomFillStop');
+
+      let fillInterval;
+      let timerInterval;
+      let isRunning = false;
+
+      // build slots
+      function buildSlots(container, count) {
+        container.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+          const slot = document.createElement('div');
+          slot.className = 'w-full h-0 flex-1 mb-0.5 rounded-sm bg-gray-200';
+          container.appendChild(slot);
+        }
+      }
+
+      buildSlots(kitchenVolume, kitchenMax);
+      buildSlots(bathroomVolume, bathroomMax);
+
+      function updateVolumeDisplays(filledKitchen, filledBathroom) {
+        // update kitchen slots: filled from bottom up
+        const kSlots = kitchenVolume.children;
+        for (let i = 0; i < kSlots.length; i++) {
+          if (i < filledKitchen) {
+            kSlots[i].className = 'w-full h-0 flex-1 mb-0.5 rounded-sm bg-blue-500';
+          } else {
+            kSlots[i].className = 'w-full h-0 flex-1 mb-0.5 rounded-sm bg-gray-200';
+          }
+        }
+        kitchenLabel.textContent = `Filled: ${filledKitchen} / ${kitchenMax}`;
+
+        const bSlots = bathroomVolume.children;
+        for (let i = 0; i < bSlots.length; i++) {
+          if (i < filledBathroom) {
+            bSlots[i].className = 'w-full h-0 flex-1 mb-0.5 rounded-sm bg-green-500';
+          } else {
+            bSlots[i].className = 'w-full h-0 flex-1 mb-0.5 rounded-sm bg-gray-200';
+          }
+        }
+        bathroomLabel.textContent = `Filled: ${filledBathroom} / ${bathroomMax}`;
+      }
+
+      // Update tank fill gradients - CORRECTED FOR BOTTOM-TO-TOP FILLING
+      function updateTankFillGradient(tank, fillPercentage) {
+        const gradientStop = tank === 'kitchen' ? kitchenFillStop : bathroomFillStop;
+        // Since gradient starts from bottom (y1="100%"), we use direct percentage
+        gradientStop.setAttribute('offset', `${fillPercentage}%`);
+      }
+
+      // Update valve orientations based on selection
+      function updateValveOrientations() {
+        const tank = tankSelect.value;
+        const pump = pumpSelect.value;
+        
+        // Reset all valve orientations
+        mainValve.className.baseVal = 'valve-icon';
+        kitchenValve.className.baseVal = 'valve-icon';
+        bathroomValve.className.baseVal = 'valve-icon';
+        
+        // Set valve orientations based on flow path
+        if (tank === 'kitchen') {
+          kitchenValve.className.baseVal = 'valve-icon valve-vertical'; // Open for kitchen
+          bathroomValve.className.baseVal = 'valve-icon valve-horizontal'; // Closed for bathroom
+          
+          if (pump === 'boring') {
+            mainValve.className.baseVal = 'valve-icon valve-diagonal-1'; // Route from boring to kitchen
+          } else {
+            mainValve.className.baseVal = 'valve-icon valve-diagonal-2'; // Route from underground to kitchen
+          }
+        } else { // bathroom
+          kitchenValve.className.baseVal = 'valve-icon valve-horizontal'; // Closed for kitchen
+          bathroomValve.className.baseVal = 'valve-icon valve-vertical'; // Open for bathroom
+          
+          if (pump === 'boring') {
+            mainValve.className.baseVal = 'valve-icon valve-diagonal-2'; // Route from boring to bathroom
+          } else {
+            mainValve.className.baseVal = 'valve-icon valve-diagonal-1'; // Route from underground to bathroom
+          }
+        }
+      }
+
+      // Hide all pipes
+      function hideAllPipes() {
+        [pipeKitchenBoring, pipeKitchenUnderground, pipeBathroomBoring, pipeBathroomUnderground].forEach(pipe => {
+          pipe.setAttribute('visibility', 'hidden');
+          pipe.classList.remove('flowing');
+        });
+        startButton.setAttribute('visibility', 'hidden');
+        startText.setAttribute('visibility', 'hidden');
+        stopButton.setAttribute('visibility', 'hidden');
+        stopText.setAttribute('visibility', 'hidden');
+        timerDisplay.setAttribute('visibility', 'hidden');
+      }
+
+      // Show appropriate pipe based on selection
+      function showPipe() {
+        hideAllPipes();
+        updateValveOrientations();
+        
+        const tank = tankSelect.value;
+        const pump = pumpSelect.value;
+        const emptyLines = parseInt(linesRange.value || '0', 10);
+
+        if (emptyLines > 0 && !isRunning) {
+          let currentPipe;
+          
+          if (tank === 'kitchen' && pump === 'boring') {
+            currentPipe = pipeKitchenBoring;
+          } else if (tank === 'kitchen' && pump === 'underground') {
+            currentPipe = pipeKitchenUnderground;
+          } else if (tank === 'bathroom' && pump === 'boring') {
+            currentPipe = pipeBathroomBoring;
+          } else if (tank === 'bathroom' && pump === 'underground') {
+            currentPipe = pipeBathroomUnderground;
+          }
+
+          if (currentPipe) {
+            currentPipe.setAttribute('visibility', 'visible');
+            startButton.setAttribute('visibility', 'visible');
+            startText.setAttribute('visibility', 'visible');
+          }
+        }
+      }
+
+      // Stop water flow function
+      function stopWaterFlow() {
+        if (!isRunning) return;
+        
+        // Clear intervals
+        if (fillInterval) clearInterval(fillInterval);
+        if (timerInterval) clearInterval(timerInterval);
+        
+        // Stop pipe animation
+        [pipeKitchenBoring, pipeKitchenUnderground, pipeBathroomBoring, pipeBathroomUnderground].forEach(pipe => {
+          pipe.classList.remove('flowing');
+        });
+        
+        // Reset state
+        isRunning = false;
+        
+        // Hide stop button and timer, show start button
+        stopButton.setAttribute('visibility', 'hidden');
+        stopText.setAttribute('visibility', 'hidden');
+        timerDisplay.setAttribute('visibility', 'hidden');
+        
+        // Show start button if there are empty lines
+        const emptyLines = parseInt(linesRange.value || '0', 10);
+        if (emptyLines > 0) {
+          startButton.setAttribute('visibility', 'visible');
+          startText.setAttribute('visibility', 'visible');
+        }
+      }
+
+      // Start water flow and tank filling animation
+      function startWaterFlow() {
+        if (isRunning) return;
+        
+        isRunning = true;
+        const tank = tankSelect.value;
+        const pump = pumpSelect.value;
+        const emptyLines = parseInt(linesRange.value || '0', 10);
+        
+        if (emptyLines === 0) return;
+
+        let currentPipe;
+        
+        if (tank === 'kitchen' && pump === 'boring') {
+          currentPipe = pipeKitchenBoring;
+        } else if (tank === 'kitchen' && pump === 'underground') {
+          currentPipe = pipeKitchenUnderground;
+        } else if (tank === 'bathroom' && pump === 'boring') {
+          currentPipe = pipeBathroomBoring;
+        } else if (tank === 'bathroom' && pump === 'underground') {
+          currentPipe = pipeBathroomUnderground;
+        }
+
+        if (currentPipe) {
+          currentPipe.classList.add('flowing');
+        }
+
+        // Calculate time per line and total time
+        let timePerLine;
+        if (tank === 'kitchen') {
+          timePerLine = pump === 'underground' ? 1 : 1.5;
+        } else {
+          timePerLine = pump === 'underground' ? 1.5 : 2.25;
+        }
+
+        const totalTime = emptyLines * timePerLine;
+        const timePerLineMs = timePerLine * 60 * 1000; // Convert minutes to milliseconds
+
+        // Hide start button and show stop button and timer
+        startButton.setAttribute('visibility', 'hidden');
+        startText.setAttribute('visibility', 'hidden');
+        stopButton.setAttribute('visibility', 'visible');
+        stopText.setAttribute('visibility', 'visible');
+        timerDisplay.setAttribute('visibility', 'visible');
+
+        let elapsedTime = 0;
+        let filledLines = 0;
+        const max = tank === 'kitchen' ? kitchenMax : bathroomMax;
+        const startFilled = max - emptyLines;
+
+        // Update displays
+        timerInterval = setInterval(() => {
+          elapsedTime += 1000; // 1 second
+          const remainingTime = Math.max(0, (totalTime * 60 * 1000) - elapsedTime);
+          const minutes = Math.floor(remainingTime / 60000);
+          const seconds = Math.floor((remainingTime % 60000) / 1000);
+          timerDisplay.textContent = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+          
+          if (remainingTime <= 0) {
+            clearInterval(timerInterval);
+            timerDisplay.textContent = 'Filling complete!';
+            setTimeout(() => {
+              stopWaterFlow();
+            }, 2000);
+          }
+        }, 1000);
+
+        // Fill lines progressively
+        fillInterval = setInterval(() => {
+          if (filledLines < emptyLines) {
+            filledLines++;
+            const currentFilled = startFilled + filledLines;
+            
+            // Update volume displays
+            if (tank === 'kitchen') {
+              updateVolumeDisplays(currentFilled, bathroomMax);
+            } else {
+              updateVolumeDisplays(kitchenMax, currentFilled);
+            }
+            
+            // Update tank gradient fill
+            const fillPercentage = (currentFilled / max) * 100;
+            updateTankFillGradient(tank, fillPercentage);
+            
+            // Update slider/number input
+            const newEmptyLines = max - currentFilled;
+            linesRange.value = newEmptyLines;
+            linesNumber.value = newEmptyLines;
+          } else {
+            clearInterval(fillInterval);
+            if (currentPipe) {
+              currentPipe.classList.remove('flowing');
+            }
+          }
+        }, timePerLineMs);
+      }
+
+      // initial full tanks
+      updateVolumeDisplays(kitchenMax, bathroomMax);
+      updateTankFillGradient('kitchen', 100);
+      updateTankFillGradient('bathroom', 100);
+      updateValveOrientations();
+
+      // sync range and number inputs
+      linesRange.addEventListener('input', () => {
+        if (!isRunning) {
+          linesNumber.value = linesRange.value;
+          computeAndDisplay();
+          showPipe();
+        }
+      });
+
+      linesNumber.addEventListener('input', () => {
+        if (!isRunning) {
+          let v = parseInt(linesNumber.value || '0', 10);
+          const currentMax = tankSelect.value === 'kitchen' ? kitchenMax : bathroomMax;
+          if (isNaN(v)) v = 0;
+          if (v < 0) v = 0;
+          if (v > currentMax) v = currentMax;
+          linesNumber.value = v;
+          linesRange.value = v;
+          computeAndDisplay();
+          showPipe();
+        }
+      });
+
+      // adjust max when tank changes
+      tankSelect.addEventListener('change', () => {
+        if (!isRunning) {
+          const max = tankSelect.value === 'kitchen' ? kitchenMax : bathroomMax;
+          linesRange.max = max;
+          linesNumber.max = max;
+
+          const currentVal = Math.max(0, parseInt(linesRange.value || '0', 10));
+          if (currentVal > max) {
+            linesRange.value = max;
+            linesNumber.value = max;
+          }
+          computeAndDisplay();
+          showPipe();
+        }
+      });
+
+      pumpSelect.addEventListener('change', () => {
+        if (!isRunning) {
+          computeAndDisplay();
+          showPipe();
+        }
+      });
+
+      // Control button events
+      startButton.addEventListener('click', startWaterFlow);
+      startText.addEventListener('click', startWaterFlow);
+      stopButton.addEventListener('click', stopWaterFlow);
+      stopText.addEventListener('click', stopWaterFlow);
+
+      function computeAndDisplay() {
+        const tank = tankSelect.value;
+        const pump = pumpSelect.value;
+        const emptyLines = Math.max(0, parseInt(linesRange.value || '0', 10));
+
+        const max = tank === 'kitchen' ? kitchenMax : bathroomMax;
+        const filled = Math.max(0, max - emptyLines);
+
+        if (tank === 'kitchen') {
+          updateVolumeDisplays(filled, bathroomMax);
+        } else {
+          updateVolumeDisplays(kitchenMax, filled);
+        }
+
+        // Update tank fill gradients
+        const fillPercentage = (filled / max) * 100;
+        updateTankFillGradient(tank, fillPercentage);
+
+        let timePerLine;
+        if (tank === 'kitchen') {
+          timePerLine = pump === 'underground' ? 1 : 1.5;
+        } else {
+          timePerLine = pump === 'underground' ? 1.5 : 2.25;
+        }
+
+        const totalTime = (emptyLines * timePerLine);
+        const result = document.getElementById('result');
+        result.innerText = `Selected: ${tank} tank via ${pump} pump. Lines to fill: ${emptyLines}. Time per line: ${timePerLine} min. Total time: ${totalTime} min.`;
+      }
+
+      // initialize limits based on default tank and show initial state
+      (function init() {
+        const max = tankSelect.value === 'kitchen' ? kitchenMax : bathroomMax;
+        linesRange.max = max;
+        linesNumber.max = max;
+        linesRange.value = 0;
+        linesNumber.value = 0;
+        computeAndDisplay();
+        hideAllPipes();
+      })();
+    })();
+  </script>
+
+  <!-- Result -->
+  <div class="mt-6 text-center text-lg font-semibold text-gray-800" id="result"></div>
+</div>
+
+</body>
+</html>
