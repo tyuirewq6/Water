@@ -1,3 +1,18 @@
+<!-- I want to create a html tailwind css site which help to refill water tank 
+I have to water tank 
+1. for Bathroom
+2. for Kitchen 
+
+and i have two motors pump to refill the water tank
+1. Motor Pump of boring water
+2. Motor Pump of underground tank water
+
+now it will first ask which tank you want to refill
+and then it will ask which motor pump you want to use to refill the water tank
+and it ask no of lines empty in the tank(each line takes 1 minute from motor pump underground tank water to fill kitchen tank and 1 and 1/2 minutes from motor pump of boring water to fill kitchen tank and 1 and 1/2 minutes from motor pump underground tank water to fill kitchen tank and 2 and 1/4 minutes from motor pump of boring water to fill bathroom tank)
+and it will show the time taken to refill the water tank
+
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -380,6 +395,151 @@
       let timerInterval;
       let isRunning = false;
 
+      // Audio alarm (Web Audio API) - compatible with static hosting (no external file)
+      let _audioCtx = null;
+      function ensureAudioContext() {
+        if (!_audioCtx) {
+          _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return _audioCtx;
+      }
+
+      // Play a short 3-beep alarm pattern. Called when time reaches 0.
+      // Alarm control: start a repeating beep pattern until explicitly stopped,
+      // and show an "Alarm Off" button while ringing.
+      let alarmRunning = false;
+      let alarmTimeouts = [];
+      let alarmNodes = []; // keep refs to stop immediately
+      let alarmOffBtn = null;
+
+      function ensureAlarmButtonContainer() {
+        if (alarmOffBtn) return alarmOffBtn;
+        // prefer to append inside the main card if available
+        const container = document.querySelector('.bg-white') || document.body;
+        alarmOffBtn = document.createElement('button');
+        alarmOffBtn.id = 'alarmOffBtn';
+        alarmOffBtn.type = 'button';
+        alarmOffBtn.textContent = 'ALARM OFF';
+        alarmOffBtn.style.position = 'fixed';
+        alarmOffBtn.style.right = '16px';
+        alarmOffBtn.style.top = '16px';
+        alarmOffBtn.style.zIndex = '9999';
+        alarmOffBtn.style.background = '#ef4444';
+        alarmOffBtn.style.color = 'white';
+        alarmOffBtn.style.border = 'none';
+        alarmOffBtn.style.padding = '8px 12px';
+        alarmOffBtn.style.borderRadius = '6px';
+        alarmOffBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        alarmOffBtn.style.cursor = 'pointer';
+        alarmOffBtn.style.fontWeight = '600';
+        alarmOffBtn.style.display = 'none';
+        alarmOffBtn.addEventListener('click', () => {
+          stopAlarmPattern();
+        });
+        container.appendChild(alarmOffBtn);
+        return alarmOffBtn;
+      }
+
+      function showAlarmOffButton() {
+        const btn = ensureAlarmButtonContainer();
+        btn.style.display = 'inline-block';
+      }
+
+      function hideAlarmOffButton() {
+        if (!alarmOffBtn) return;
+        alarmOffBtn.style.display = 'none';
+      }
+
+      function playAlarmPattern() {
+        try {
+          const ctx = ensureAudioContext();
+          if (ctx.state === 'suspended') ctx.resume();
+
+          if (alarmRunning) return;
+          alarmRunning = true;
+          alarmTimeouts = [];
+          alarmNodes = [];
+          showAlarmOffButton();
+
+          const beepDur = 0.12; // seconds
+          const gap = 0.08; // seconds between beeps
+          const freqs = [880, 1000, 1200];
+
+          // schedule one pattern and then re-schedule repeatedly until stopped
+          function schedulePattern() {
+        if (!alarmRunning) return;
+        const now = ctx.currentTime + 0.02;
+        freqs.forEach((freq, i) => {
+          const start = now + i * (beepDur + gap);
+          const stop = start + beepDur;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(0.6, start + 0.01);
+          gain.gain.linearRampToValueAtTime(0, stop);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          // stop slightly after the gain ramps down to avoid clicks
+          try { osc.stop(stop + 0.02); } catch (e) {}
+          // keep refs so we can stop immediately if requested
+          alarmNodes.push({ osc, gain, stopTime: stop + 0.02 });
+        });
+
+        const patternDuration = freqs.length * (beepDur + gap);
+        const id = setTimeout(() => {
+          // clear old node refs that already stopped to avoid memory leak
+          const nowMs = Date.now();
+          alarmNodes = alarmNodes.filter(n => {
+            // can't reliably check audio node state; clean up after some time
+            return true;
+          });
+          schedulePattern();
+        }, Math.round(patternDuration * 1000));
+        alarmTimeouts.push(id);
+          }
+
+          schedulePattern();
+        } catch (e) {
+          console.warn('Alarm unavailable', e);
+        }
+      }
+
+      function stopAlarmPattern() {
+        // stop scheduling further patterns
+        alarmRunning = false;
+        alarmTimeouts.forEach(id => clearTimeout(id));
+        alarmTimeouts = [];
+
+        // Try to immediately silence and stop any scheduled oscillators
+        try {
+          const ctx = _audioCtx || (window.AudioContext && new AudioContext());
+          const now = (ctx && ctx.currentTime) ? ctx.currentTime : null;
+          alarmNodes.forEach(({ osc, gain }) => {
+        try {
+          if (now !== null) {
+            try { gain.gain.cancelScheduledValues(now); } catch (e) {}
+            try { gain.gain.setValueAtTime(0, now); } catch (e) {}
+            try { osc.stop(now + 0.02); } catch (e) {
+          try { osc.stop(); } catch (err) {}
+            }
+          } else {
+            try { osc.stop(); } catch (e) {}
+          }
+        } catch (e) {}
+        try { osc.disconnect(); } catch (e) {}
+        try { gain.disconnect(); } catch (e) {}
+          });
+        } catch (e) {
+          // ignore
+        } finally {
+          alarmNodes = [];
+          hideAlarmOffButton();
+        }
+      }
+
       // build slots
       function buildSlots(container, count) {
         container.innerHTML = '';
@@ -587,8 +747,14 @@
           
           if (remainingTime <= 0) {
             clearInterval(timerInterval);
+            // visual/textual completion
             timerDisplay.textContent = 'Filling complete!';
+            timerDisplay.classList.add('text-red-600');
+            // play alarm (user-initiated start allows audio playback on most browsers)
+            playAlarmPattern();
+            // stop and cleanup after short pause
             setTimeout(() => {
+              timerDisplay.classList.remove('text-red-600');
               stopWaterFlow();
             }, 2000);
           }
@@ -710,7 +876,7 @@
 
         const totalTime = (emptyLines * timePerLine);
         const result = document.getElementById('result');
-        result.innerText = `Selected: ${tank} tank via ${pump} pump. Lines to fill: ${emptyLines}. Time per line: ${timePerLine} min. Total time: ${totalTime} min.`;
+        // result.innerText = `Selected: ${tank} tank via ${pump} pump. Lines to fill: ${emptyLines}. Time per line: ${timePerLine} min. Total time: ${totalTime} min.`;
       }
 
       // initialize limits based on default tank and show initial state
