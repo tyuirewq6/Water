@@ -118,8 +118,107 @@
       </div>
     </div>
   </div>
+<!-- Responsive step images + styled counter for multi-step flows -->
+<div class="mb-6 flex flex-col items-center">
+  <div id="imageContainer" class="relative w-full max-w-md">
+    <img id="stepImage" src="" alt="Flow step" class="w-full h-auto rounded-lg shadow-md object-contain" />
+    <div id="stepCounter" class="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs font-semibold px-3 py-1 rounded-full hidden"></div>
 
-  <!-- SVG Diagram -->
+    <!-- Prev / Next for multi-step sequences -->
+    <button id="prevBtn" aria-label="Previous step"
+            class="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow hidden">
+      ‹
+    </button>
+    <button id="nextBtn" aria-label="Next step"
+            class="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow hidden">
+      ›
+    </button>
+  </div>
+  <div id="imageCaption" class="text-sm text-gray-600 mt-2"></div>
+</div>
+
+<script>
+  // Run after DOM ready so main controls exist
+  document.addEventListener('DOMContentLoaded', () => {
+    const tankSelect = document.getElementById('tankSelect');
+    const pumpSelect = document.getElementById('pumpSelect');
+    const linesRange = document.getElementById('linesEmpty');
+    const linesNumber = document.getElementById('linesEmptyNumber');
+
+    const stepImage = document.getElementById('stepImage');
+    const stepCounter = document.getElementById('stepCounter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const imageCaption = document.getElementById('imageCaption');
+
+    // map selection => image sequence (filenames relative to index.html)
+    const imageMap = {
+      'boring|bathroom': ['b2b.jpg'],
+      'boring|kitchen': ['b2k1.jpg', 'b2k2.jpg'],
+      'underground|bathroom': ['u2b1.jpg', 'u2b2.jpg'],
+      'underground|kitchen': ['u2k.jpg']
+    };
+
+    let currentSequence = [];
+    let currentIndex = 0;
+
+    function setSequenceForSelection() {
+      const key = `${pumpSelect.value}|${tankSelect.value}`;
+      currentSequence = imageMap[key] ? [...imageMap[key]] : [];
+      currentIndex = 0;
+      renderImage();
+    }
+
+    function renderImage() {
+      if (!currentSequence || currentSequence.length === 0) {
+        stepImage.src = '';
+        stepImage.alt = '';
+        stepCounter.classList.add('hidden');
+        prevBtn.classList.add('hidden');
+        nextBtn.classList.add('hidden');
+        imageCaption.textContent = '';
+        return;
+      }
+
+      // use first image as fallback if path missing
+      stepImage.src = currentSequence[currentIndex];
+      stepImage.alt = `Step ${currentIndex + 1} of ${currentSequence.length}`;
+      imageCaption.textContent = `${pumpSelect.options[pumpSelect.selectedIndex].text} → ${tankSelect.options[tankSelect.selectedIndex].text}`;
+
+      if (currentSequence.length > 1) {
+        stepCounter.classList.remove('hidden');
+        stepCounter.textContent = `${currentIndex + 1} / ${currentSequence.length}`;
+        prevBtn.classList.remove('hidden');
+        nextBtn.classList.remove('hidden');
+      } else {
+        stepCounter.classList.add('hidden');
+        prevBtn.classList.add('hidden');
+        nextBtn.classList.add('hidden');
+      }
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (currentSequence.length <= 1) return;
+      currentIndex = (currentIndex - 1 + currentSequence.length) % currentSequence.length;
+      renderImage();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentSequence.length <= 1) return;
+      currentIndex = (currentIndex + 1) % currentSequence.length;
+      renderImage();
+    });
+
+    // update on control changes
+    tankSelect.addEventListener('change', setSequenceForSelection);
+    pumpSelect.addEventListener('change', setSequenceForSelection);
+    linesRange.addEventListener('input', setSequenceForSelection);
+    linesNumber.addEventListener('input', setSequenceForSelection);
+
+    // initialize once
+    setSequenceForSelection();
+  });
+</script>
 <svg width="100%" height="400">
   <!-- Tank Fill Gradients - CORRECTED FOR BOTTOM-TO-TOP FILLING -->
   <defs>
